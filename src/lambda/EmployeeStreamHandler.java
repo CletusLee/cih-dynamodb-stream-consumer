@@ -72,34 +72,32 @@ public class EmployeeStreamHandler implements
 
 			}
 
-			if ("CIH".equalsIgnoreCase(employee.getTeam())) {
-				try {
-					String employeeJson = new JSONObject(employee).toString();
-					logger.log("ready to write data: " + employeeJson);
-					List<Future<UserRecordResult>> putFutures = new LinkedList<Future<UserRecordResult>>();
-					putFutures.add(producer.addUserRecord("employee-event", "employee-event",
-							ByteBuffer.wrap(employeeJson.getBytes("UTF-8"))));
+			try {
+				String employeeJson = new JSONObject(employee).toString();
+				logger.log("ready to write data: " + employeeJson);
+				List<Future<UserRecordResult>> putFutures = new LinkedList<Future<UserRecordResult>>();
+				putFutures.add(producer.addUserRecord("employee-event", "employee-event",
+						ByteBuffer.wrap(employeeJson.getBytes("UTF-8"))));
 
-					for (Future<UserRecordResult> f : putFutures) {
-						logger.log("evaluate the results from Kinesis");
-						UserRecordResult result = f.get(); // this does block
-						if (result.isSuccessful()) {
-							logger.log("Put record into shard " +
-									result.getShardId());
-						} else {
-							for (Attempt attempt : result.getAttempts()) {
-								// Analyze and respond to the failure
-								logger.log("failed when adding records to Kinesis with the error: " + attempt.getErrorMessage());
-							}
+				for (Future<UserRecordResult> f : putFutures) {
+					logger.log("evaluate the results from Kinesis");
+					UserRecordResult result = f.get(); // this does block
+					if (result.isSuccessful()) {
+						logger.log("Put record into shard " +
+								result.getShardId());
+					} else {
+						for (Attempt attempt : result.getAttempts()) {
+							// Analyze and respond to the failure
+							logger.log("failed when adding records to Kinesis with the error: " + attempt.getErrorMessage());
 						}
-						logger.log("finished from Kinesis");
 					}
-
-					logger.log("successfully");
-				} catch (UnsupportedEncodingException | InterruptedException | ExecutionException e) {
-					logger.log("failed to produce events. message = " + e.getMessage());
-					e.printStackTrace();
+					logger.log("finished from Kinesis");
 				}
+
+				logger.log("successfully");
+			} catch (UnsupportedEncodingException | InterruptedException | ExecutionException e) {
+				logger.log("failed to produce events. message = " + e.getMessage());
+				e.printStackTrace();
 			}
 		}
 
